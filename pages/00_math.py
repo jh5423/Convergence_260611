@@ -111,93 +111,143 @@ if 'rocket_data' in st.session_state:
             mime="text/csv"
         )
 
-    # --- 기능 3: [신규 추가] 학생 주도 수학 탐구 활동 공간 ---
+    # --- 기능 3: [업그레이드] 학생 주도 수학 탐구 활동 및 그래프 개형 비교 공간 ---
     st.divider()
-    st.subheader("🧩 [학생 활동] 실험 데이터를 활용한 포물선 방정식 찾기")
+    st.subheader("🧩 [학생 활동] 실험 데이터를 활용한 포물선 방정식 예측 및 모델링")
     st.markdown("""
-    위 테이블에서 **실험 번호 하나를 선택**하여 나만의 이차함수 모델을 완성해 보세요!
-    * **가정**: 물로켓은 원점 $(0,0)$에서 발사되어 낙하하므로, 상수항 $c=0$인 $y = ax^2 + bx$ 형태를 가집니다.
-    * **목표**: 주어진 **사거리(x절편)**와 **최고 높이(꼭짓점의 y좌표)**를 이용해 계수 $a$와 $b$를 구하고 그래프를 매칭하세요.
+    위 테이블에서 **실험 번호 하나를 선택**하여 나만의 수학 모델을 만들어보세요.
+    계산에 치치지 않도록 우측의 **'보조 계산기'**를 활용하고, 수식을 풀기 전 **'직관적 개형'**을 먼저 조절해 보세요!
     """)
 
-    # 1. 실험 번호 선택
+    # 1. 실험 번호 선택 및 데이터 추출
     selected_num = st.selectbox("🎯 분석할 실험 번호를 선택하세요:", df_display["실험 번호"])
     student_row = df_display[df_display["실험 번호"] == selected_num].iloc[0]
     
     r_val = student_row["실제 측정 사거리 (m)"]
     h_val = student_row["실제 최고 높이 (m)"]
     
-    # 힌트 및 정보 제공
     st.info(f"""
-    📋 **선택한 실험의 단서**
-    * **발사 및 착지점**: $(0,0)$ 및 $({r_val}, 0)$
-    * **최고 도달 높이**: {h_val} m
-    * *수학적 힌트*: 포물선은 대칭이므로 꼭짓점의 $x$좌표는 사거리의 절반인 $h = {r_val/2:.2f}$입니다. 즉, 꼭짓점 좌표는 $({r_val/2:.2f}, {h_val})$이 됩니다!
+    📋 **선택한 실험의 타겟 단서**
+    * **원점 및 낙하지점**: $(0,0)$ 및 $({r_val}, 0)$
+    * **실제 최고 높이**: {h_val} m
+    * *힌트*: 포물선은 대칭이므로, 이론적인 꼭짓점의 $x$좌표는 사거리의 절반인 **{r_val/2:.2f}** 근처가 됩니다!
     """)
 
-    # 2. 학생 입력 수식 칸
-    st.markdown("### ✏️ 1단계: 방정식의 계수 $a, b$ 찾기")
-    st.caption("꼭짓점 형식 $y = a(x-h)^2 + k$ 또는 인수분해 형식 $y = ax(x-R)$을 전개하여 $a$와 $b$를 구해보세요.")
-    
-    col_input_a, col_input_b = st.columns(2)
-    with col_input_a:
-        st_a = st.number_input("계수 a 입력 (주의: 위로 볼록하므로 음수입니다)", value=-0.1000, step=0.0001, format="%.4f")
-    with col_input_b:
-        st_b = st.number_input("계수 b 입력 (양수)", value=1.00, step=0.01, format="%.2f")
+    # 레이아웃 분할: 왼쪽(활동 영역) / 오른쪽(수학 보조 계산기)
+    col_activity, col_calc = st.columns([1.8, 1.2])
 
-    # 3. 학생이 계산한 꼭짓점 입력 칸
-    st.markdown("### ✏️ 2단계: 수식 기반 꼭짓점 직접 계산")
-    st.caption("내가 정한 $a, b$ 값만을 이용하여 공식($x = -\\frac{b}{2a}$, $y = f(x)$)으로 도출되는 꼭짓점을 입력하세요.")
-    
-    col_v_x, col_v_y = st.columns(2)
-    with col_v_x:
-        st_vx = st.number_input("내가 계산한 꼭짓점 x좌표:", value=0.0, step=0.1)
-    with col_v_y:
-        st_vy = st.number_input("내가 계산한 꼭짓점 y좌표(최고높이):", value=0.0, step=0.1)
-
-    # 4. 채점 및 시각화 버튼
-    if st.button("🔍 나만의 함수 그래프 그리고 정답 검증하기"):
+    with col_activity:
+        # 단계 A: 직관적 개형 예측 (연필 스케치 대용)
+        st.markdown("### 🎨 1단계: 내 직관으로 그래프 개형 스케치하기")
+        st.caption("수식을 계산하기 전, 아래 슬라이더를 움직여 파란색/빨간색 타겟 점을 통과할 것 같은 '상상 속 그래프 모양'을 눈으로 먼저 맞춰보세요.")
         
-        # 실제 입력한 a, b 기반의 수학적 꼭짓점 정답 계산
+        sketch_r = st.slider("내가 예상하는 낙하 거리 설정:", min_value=0.0, max_value=float(r_val*1.5), value=float(r_val*0.8), step=0.1)
+        sketch_h = st.slider("내가 예상하는 최고 높이 설정:", min_value=0.0, max_value=float(h_val*1.5), value=float(h_val*0.7), step=0.1)
+
+        # 단계 B: 실제 계산 결과 입력
+        st.markdown("### ✏️ 2단계: 수식 기반 계수 $a, b$ 및 꼭짓점 계산하기")
+        st.caption("인수분해형 $y = ax(x-R)$ 또는 꼭짓점형 $y = a(x-h)^2 + k$를 전개하여 도출한 계수와 꼭짓점을 입력하세요.")
+        
+        col_in1, col_in2 = st.columns(2)
+        with col_in1:
+            st_a = st.number_input("계수 a 입력 (예: -0.0512)", value=-0.1000, step=0.0001, format="%.4f")
+            st_vx = st.number_input("계산된 꼭짓점 x좌표:", value=0.0, step=0.1)
+        with col_in2:
+            st_b = st.number_input("계수 b 입력 (예: 1.15)", value=1.00, step=0.01, format="%.2f")
+            st_vy = st.number_input("계산된 꼭짓점 y좌표 (최고높이):", value=0.0, step=0.1)
+
+    with col_calc:
+        st.markdown("### 🧮 뚝딱 수학 보조 계산기")
+        st.caption("연립방정식이나 꼭짓점 좌표를 풀 때 생기는 복잡한 소수점 계산을 도와줍니다. 수식을 입력하고 Enter를 누르세요.")
+        
+        calc_input = st.text_input("계산기 입력창 (예시: -4.35 / (10.2**2) 또는 12.4 / 2 )", value="")
+        if calc_input:
+            try:
+                # 학생들이 자주 실수하는 기호 ^를 파이썬의 **로 치환
+                safe_expr = calc_input.replace('^', '**')
+                # 기본적인 사칙연산 및 숫자 기호만 허용 (보안 처리)
+                if all(c in "0123456789+-*/.() \t*^" for c in calc_input):
+                    calc_res = eval(safe_expr)
+                    st.metric(label="💡 계산 결과값", value=f"{calc_res:.6f}")
+                    st.code(f"입력한 식: {calc_input}  ->  결과: {calc_res}", language="text")
+                else:
+                    st.error("숫자, 사칙연산(+, -, *, /), 괄호, 제곱(**) 기호만 입력할 수 있습니다.")
+            except Exception as e:
+                st.error("수식에 오류가 있습니다. 형식을 다시 확인해 주세요.")
+        
+        st.markdown("""
+        ---
+        💡 **풀이 도우미 팁 (인수분해 형식 활용)**
+        물로켓 함수는 $y = ax(x - R)$ 로 둘 수 있습니다.
+        1. 이 식에 꼭짓점 좌표 $(R/2, H)$를 대입합니다.
+        2. $H = a \\times \\frac{R}{2} \\times (-\\frac{R}{2}) = -a \\times \\frac{R^2}{4}$
+        3. 따라서 $a = -\\frac{4H}{R^2}$ 가 됩니다. 
+        4. 위 계산기에 `-4 * [최고높이] / ([사거리]**2)`를 입력하여 $a$를 쉽게 구해보세요!
+        """)
+
+    # 4. 채점 및 시각화 버튼 구역
+    st.markdown("---")
+    if st.button("🔍 내 예측 개형과 계산 수식 그래프 겹쳐서 비교하기"):
+        
+        # [데이터 1] 학생이 슬라이더로 맞춘 직관적 예측 개형 계산
+        # y = a_g * x * (x - R_g) 형식에서 최고높이가 H_g가 되도록 계수 자동 매칭
+        x_space = np.linspace(0, max(r_val, sketch_r) * 1.1, 120)
+        if sketch_r > 0:
+            a_sketch = -4 * sketch_h / (sketch_r ** 2)
+            y_sketch = a_sketch * x_space * (x_space - sketch_r)
+            y_sketch = np.clip(y_sketch, 0, None)
+        else:
+            y_sketch = np.zeros_like(x_space)
+
+        # [데이터 2] 학생이 입력한 수식 기반 그래프 계산
+        y_student = st_a * (x_space**2) + st_b * x_space
+        y_student = np.clip(y_student, 0, None)
+        
+        # 수식 기반 실제 꼭짓점 계산 정답
         true_vx = -st_b / (2 * st_a) if st_a != 0 else 0
         true_vy = st_a * (true_vx**2) + st_b * true_vx
         
-        # 정답 검증 (오차범위 0.2 이내 인정)
+        # 결과 리포트 판정
         is_vertex_correct = abs(st_vx - true_vx) < 0.2 and abs(st_vy - true_vy) < 0.2
         is_model_matching = abs(true_vy - h_val) < 0.3 and abs(true_vx - (r_val/2)) < 0.3
         
-        # 결과 메시지 출력
-        st.markdown("#### 📢 분석 결과 리포트")
-        if is_vertex_correct:
-            st.success(f"✅ **꼭짓점 계산 성공!** 입력하신 계수 $a, b$에 따른 이론적 꼭짓점 $({true_vx:.2f}, {true_vy:.2f})$을 정확하게 찾아내셨습니다.")
-        else:
-            st.error(f"❌ **꼭짓점 계산 오차 발생!** 입력한 계수 기반의 실제 꼭짓점은 $({true_vx:.2f}, {true_vy:.2f})$ 입니다. 계산 과정을 다시 점검해 보세요.")
-            
-        if is_model_matching:
-            st.balloons()
-            st.success("🎉 **완벽한 모델링!** 실제 물로켓의 실험 오차 데이터와 거의 일치하는 함수식을 찾아내셨습니다!")
-        else:
-            st.warning(f"💡 **모델 튜닝 필요**: 현재 함수 그래프의 최고 높이는 {true_vy:.2f}m로, 실제 실험 데이터의 최고 높이({h_val}m)와 차이가 있습니다. 계수 $a$를 조금 더 정밀하게 조절해 보세요.")
+        # 메시지 출력
+        col_res1, col_res2 = st.columns(2)
+        with col_res1:
+            if is_vertex_correct:
+                st.success(f"✅ **꼭짓점 계산 성공!** 내가 적은 수식의 계산상 꼭짓점 $({true_vx:.2f}, {true_vy:.2f})$과 입력값이 일치합니다.")
+            else:
+                st.error(f"❌ **꼭짓점 계산 검증 실패**: 입력하신 $a, b$ 수식의 실제 꼭짓점은 $({true_vx:.2f}, {true_vy:.2f})$입니다. 공식을 다시 확인해보세요.")
+        with col_res2:
+            if is_model_matching:
+                st.balloons()
+                st.success("🎉 **실험 데이터 피팅 완료!** 실제 물로켓의 궤적을 완벽하게 대변하는 수식을 찾았습니다!")
+            else:
+                st.warning("💡 **모델 수정 필요**: 수식 그래프가 실제 실험 데이터 점(X, 다이아몬드)을 정확히 지나도록 계수 $a, b$를 정밀하게 조정해보세요.")
 
-        # 학생이 만든 식 그래프로 시각화
-        x_student = np.linspace(0, r_val * 1.1, 100)
-        y_student = st_a * (x_student**2) + st_b * x_student
-        y_student = np.clip(y_student, 0, None) # 0 이하 음수 방지
+        # Plotly를 이용한 3중 그래프 시각화 (실제 점 vs 눈대중 예측 vs 수식 계산)
+        fig_compare = go.Figure()
         
-        fig_student = go.Figure()
-        # 학생이 디자인한 포물선
-        fig_student.add_trace(go.Scatter(x=x_student, y=y_student, mode='lines', name='내가 만든 수학 모델', line=dict(color='green', width=3)))
-        # 실제 데이터 핵심 포인트 점으로 표시
-        fig_student.add_trace(go.Scatter(x=[0, r_val], y=[0, 0], mode='markers', name='실제 발사/착지점', marker=dict(color='blue', size=12, symbol='x')))
-        fig_student.add_trace(go.Scatter(x=[r_val/2], y=[h_val], mode='markers', name='실제 데이터 최고점', marker=dict(color='red', size=12, symbol='diamond')))
-        # 학생이 입력한 꼭짓점 위치
-        fig_student.add_trace(go.Scatter(x=[st_vx], y=[st_vy], mode='markers+text', name='내가 제출한 꼭짓점', text=["내 꼭짓점"], textposition="top center", marker=dict(color='orange', size=10)))
+        # 1. 실제 데이터 핵심 포인트 (기준점)
+        fig_compare.add_trace(go.Scatter(x=[0, r_val], y=[0, 0], mode='markers', name='실제 발사/착지점', marker=dict(color='blue', size=14, symbol='x')))
+        fig_compare.add_trace(go.Scatter(x=[r_val/2], y=[h_val], mode='markers', name='실제 최고 높이점', marker=dict(color='red', size=14, symbol='diamond')))
+        
+        # 2. 1단계: 학생이 눈대중/직관으로 그린 예측 개형 (주황색 점선 - 연필 느낌)
+        fig_compare.add_trace(go.Scatter(x=x_space, y=y_sketch, mode='lines', name='[1단계] 내 직관적 예측 개형', line=dict(color='orange', width=2.5, dash='dash')))
+        
+        # 3. 2단계: 학생이 계산해서 입력한 수학 모델 (녹색 실선)
+        fig_compare.add_trace(go.Scatter(x=x_space, y=y_student, mode='lines', name='[2단계] 내 수식 계산 그래프', line=dict(color='green', width=3.5)))
+        
+        # 4. 학생이 제출한 꼭짓점 마커 위치
+        fig_compare.add_trace(go.Scatter(x=[st_vx], y=[st_vy], mode='markers+text', name='내가 제출한 꼭짓점 위치', text=["제출 꼭짓점"], textposition="top center", marker=dict(color='purple', size=11, symbol='circle')))
 
-        fig_student.update_layout(
-            title=f"실험 {selected_num}번 데이터 vs 내가 유도한 이차함수 그래프 비교",
+        fig_compare.update_layout(
+            title=f"실험 {selected_num}번: 직관적 개형 vs 계산 수식 모델 vs 실제 데이터 비교",
             xaxis_title="수평 거리 (m)",
             yaxis_title="높이 (m)",
-            yaxis=dict(range=[0, max(h_val * 1.5, 5)]),
-            template="plotly_white"
+            yaxis=dict(range=[0, max(h_val * 1.5, 6)]),
+            xaxis=dict(range=[0, max(r_val * 1.2, 10)]),
+            template="plotly_white",
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
         )
-        st.plotly_chart(fig_student, use_container_width=True)
+        st.plotly_chart(fig_compare, use_container_width=True)
