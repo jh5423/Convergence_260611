@@ -38,4 +38,4 @@
 - **Tools:** GitHub, Notion
 
 ---
-© 2026 팀 수화물. Powered by 수학·화학·물리 융합 프로젝트.
+st.markdown("© 2026 팀 수화물. Powered by 수학·화학·물리 융합 프로젝트.")
