@@ -1,3 +1,10 @@
+import streamlit as st
+
+# 페이지 제목 및 탭 아이콘 설정 (선택 사항)
+st.set_page_config(page_title="팀 수화물 소개", page_icon="🧪")
+
+# 전체 소개글을 st.markdown 안에 큰따옴표 3개(""")로 감싸서 넣습니다.
+st.markdown("""
 # 🧪➗🧲 팀 수화물 (Suhwamul)
 
 > **수**학, **화**학, **물**리가 서로 단단히 결합하여 새로운 가치를 만드는 융합 프로젝트 공간입니다.
@@ -38,4 +45,7 @@
 - **Tools:** GitHub, Notion
 
 ---
-st.markdown("© 2026 팀 수화물. Powered by 수학·화학·물리 융합 프로젝트.")
+""")
+
+# 저작권 표시는 보통 작고 연한 글씨로 쓰는 것이 예뻐서 st.caption()을 추천합니다!
+st.caption("© 2026 팀 수화물. Powered by 수학·화학·물리 융합 프로젝트.")
