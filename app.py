@@ -3,8 +3,10 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-# 1. 웹 페이지 제목 및 소개
+# [중요] 임포트 바로 다음에 위치해야 하며, 다른 어떤 스트림잇 함수보다 먼저 실행되어야 에러가 안 납니다.
 st.set_page_config(page_title="물로켓 수학-데이터 시뮬레이터", layout="wide")
+
+# 웹 페이지 제목 및 소개
 st.title("🚀 물로켓 포물선 궤적 및 가상 데이터 생성기")
 st.markdown("""
 이 프로그램은 물로켓의 발사 조건에 따른 **이차함수 궤적(포물선 운동)**을 시뮬레이션하고, 
@@ -20,7 +22,6 @@ angle = st.sidebar.slider("발사 각도 (도)", min_value=10, max_value=80, val
 v0 = st.sidebar.slider("초기 발사 속도 (m/s)", min_value=5, max_value=30, value=15, step=1)
 
 # --- 기능 1: 포물선 궤적 계산 및 시각화 ---
-# 수학 공식 기반 계산
 rad = np.radians(angle)
 t_flight = (2 * v0 * np.sin(rad)) / G  # 총 체공 시간
 max_range = (v0**2 * np.sin(2 * rad)) / G  # 이론상 최대 사거리
@@ -64,7 +65,7 @@ st.write("발사각을 15도부터 75도까지 변화시키며 여러 번 실험
 if st.button("🎲 새로운 가상 실험 데이터셋 생성하기"):
     # 가상 데이터 생성용 변수
     angles_test = np.repeat(np.arange(15, 76, 15), 5)  # 15, 30, 45, 60, 75도를 각각 5번씩 반복 (총 25회 실험)
-    base_v0 = 15  # 기준 속도 15m/s固定
+    base_v0 = 15  # 기준 속도 15m/s 고정
     
     results = []
     for idx, ang in enumerate(angles_test):
@@ -72,13 +73,13 @@ if st.button("🎲 새로운 가상 실험 데이터셋 생성하기"):
         # 이론적 사거리
         theoretical_r = (base_v0**2 * np.sin(2 * r_rad)) / G
         
-        # 현실적인 오차(Noise) 추가: 평균 0, 표준편차 1.5미터의 정규분포 오차 + 공기저항 효과음 유도(-값 쪽으로 치우치게)
+        # 현실적인 오차(Noise) 추가
         noise = np.random.normal(0, 1.2) - 0.5 
         actual_r = max(0, theoretical_r + noise)  # 사거리가 음수가 되지 않도록 방지
         
         results.append({
             "실험 번호": idx + 1,
-            "발as각도 (degree)": ang,
+            "발사각도 (degree)": ang,
             "이론적 사거리 (m)": round(theoretical_r, 2),
             "실제 측정 사거리 (m)": round(actual_r, 2),
             "오차 (m)": round(actual_r - theoretical_r, 2)
