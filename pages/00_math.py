@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="물로켓 융합 시뮬레이터", page_icon="🚀", layout="wide")
 
 # =====================================================================
-# 🎨 CSS 커스텀 스타일링 (1번 링크와 유사한 웹앱 느낌의 세련된 UI 적용)
+# 🎨 CSS 커스텀 스타일링 (웹앱 느낌의 세련된 UI 적용)
 # =====================================================================
 st.markdown("""
 <style>
@@ -166,23 +166,20 @@ fig.add_trace(go.Scatter(
     name=f"현재 궤적 ({water_vol}mL)", line=dict(color='#2563eb', width=4)
 ))
 
-# Plotly 디자인도 앱 CSS에 맞게 모던하게 수정
 fig.update_layout(
     title=f"<b>공간 속 비행 궤적 비교</b> (발사각: {ANGLE}° 고정)",
     xaxis_title="<b>수평 거리 (m)</b>", yaxis_title="<b>높이 (m)</b>",
     yaxis=dict(range=[0, 15], gridcolor='#e2e8f0'), 
     xaxis=dict(range=[0, 45], gridcolor='#e2e8f0'),
     template="plotly_white",
-    paper_bgcolor='rgba(0,0,0,0)',  # 배경을 투명하게 하여 카드와 어울리게 함
+    paper_bgcolor='rgba(0,0,0,0)',  
     plot_bgcolor='#f8fafc',
     margin=dict(l=40, r=40, t=60, b=40),
     legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99, bgcolor="rgba(255,255,255,0.8)")
 )
 
-# 레이아웃 분할
 col1, col2 = st.columns([2.2, 1])
 with col1:
-    # 캔버스 느낌을 주기 위해 그래프를 스타일된 컨테이너에 넣습니다.
     st.plotly_chart(fig, use_container_width=True)
 with col2:
     st.subheader("📊 궤적 역학 지표")
@@ -300,7 +297,14 @@ if 'rocket_data' in st.session_state:
         student_pred_r = fit_a * ((predict_w - fit_h) ** 2) + fit_k
 
     with col_an2:
-        st.markdown("##### 🎯 내 공식 예측 결과")
+        st.markdown("##### 🎯 내 수학 모델 기반 예측 리포트")
+        
+        # 💡 [신규 추가] 학생들이 조절한 수치 기반 실시간 모델 수식 노출 구역
+        st.markdown("<div style='background-color:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px; text-align:center;'>", unsafe_allow_html=True)
+        st.markdown("**내가 완성한 이차함수 모델식**")
+        st.latex(f"R = {fit_a:.5f}(W - {fit_h:g})^2 + {fit_k:g}")
+        st.markdown("</div>", unsafe_allow_html=True)
+        
         st.metric(label=f"💡 {predict_w}mL 입력 시 예측 거리", value=f"{student_pred_r:.2f} m")
         
         err = abs(fit_h - 400)
