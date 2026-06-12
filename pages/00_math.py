@@ -13,58 +13,71 @@ st.markdown("""
 
 # 중력 가속도 상수 (m/s^2)
 G = 9.8
+ANGLE = 45  # 실제 과학 실험 조건과 일치하도록 발사 각도는 45도로 고정
 
 # 사이드바: 시뮬레이션 변수 제어
 st.sidebar.header("🛠️ 궤적 시뮬레이션 설정")
-angle = st.sidebar.slider("발사 각도 (도)", min_value=10, max_value=80, value=45, step=5)
-v0 = st.sidebar.slider("초기 발사 속도 (m/s)", min_value=5, max_value=30, value=15, step=1)
+# 초기 속도 대신 '물의 양'을 제어 변인으로 설정
+water_vol = st.sidebar.slider("물로켓 속 물의 양 (mL)", min_value=100, max_value=700, value=400, step=10)
 
 # --- 상태 저장소 초기화 (이전 그래프 잔상 효과를 위함) ---
 if 'prev_traj' not in st.session_state:
     st.session_state['prev_traj'] = None  # 이전 궤적 데이터
 if 'curr_params' not in st.session_state:
-    st.session_state['curr_params'] = {'angle': angle, 'v0': v0, 'x': [], 'y': []}
+    st.session_state['curr_params'] = {'water_vol': water_vol, 'x': [], 'y': []}
 
-# --- 기능 1: 포물선 궤적 계산 및 시각화 ---
-rad = np.radians(angle)
+# --- 기능 1: 물의 양 기반 포물선 궤적 계산 및 시각화 ---
+# [물리-수학 연결 고리] 
+# 실험 데이터 패턴과 완벽히 일치하도록 물의 양에 따른 이론적 사거리 함수 정의 (400mL일 때 최대 사거리 40m 정점)
+theoretical_r = 40 - 0.0002 * ((water_vol - 400) ** 2)
+
+# 발사각 45도 조건에서 포물선 사거리 공식 역산하여 초기 속도 v0 추출
+# R = (v0^2 * sin(2*theta)) / G  ->  45도이므로 sin(90)=1  ->  R = v0^2 / G  ->  v0 = sqrt(R * G)
+v0 = np.sqrt(theoretical_r * G)
+
+rad = np.radians(ANGLE)
 t_flight = (2 * v0 * np.sin(rad)) / G  # 총 체공 시간
 max_range = (v0**2 * np.sin(2 * rad)) / G  # 이론상 최대 사거리
 max_height = (v0**2 * (np.sin(rad)**2)) / (2 * G)  # 이론상 최고 높이
 
+# 궤적 좌표 생성
 t_space = np.linspace(0, t_flight, 100)
 x_coords = v0 * np.cos(rad) * t_space
 y_coords = v0 * np.sin(rad) * t_space - 0.5 * G * t_space**2
 
-if angle != st.session_state['curr_params']['angle'] or v0 != st.session_state['curr_params']['v0']:
+# 값이 변경되었는지 확인하여 이전 상태 잔상으로 업데이트
+if water_vol != st.session_state['curr_params']['water_vol']:
     st.session_state['prev_traj'] = st.session_state['curr_params'].copy()
-    st.session_state['curr_params'] = {'angle': angle, 'v0': v0, 'x': x_coords, 'y': y_coords}
+    st.session_state['curr_params'] = {'water_vol': water_vol, 'x': x_coords, 'y': y_coords}
 elif len(st.session_state['curr_params']['x']) == 0:
-    st.session_state['curr_params'] = {'angle': angle, 'v0': v0, 'x': x_coords, 'y': y_coords}
+    st.session_state['curr_params'] = {'water_vol': water_vol, 'x': x_coords, 'y': y_coords}
 
 fig = go.Figure()
 
-# 잔상 그래프
+# 1. 이전 궤적 그리기 (잔상 효과)
 if st.session_state['prev_traj'] is not None and len(st.session_state['prev_traj']['x']) > 0:
     prev = st.session_state['prev_traj']
     fig.add_trace(go.Scatter(
         x=prev['x'], y=prev['y'], mode='lines', 
-        name=f"이전 궤적 (각도: {prev['angle']}°, 속도: {prev['v0']}m/s)", 
-        line=dict(color='gray', width=2, dash='dash'), opacity=0.5
+        name=f"이전 궤적 (물의 양: {prev['water_vol']}mL)", 
+        line=dict(color='gray', width=2, dash='dash'), opacity=0.4
     ))
 
-# 현재 그래프
+# 2. 현재 궤적 그리기
 fig.add_trace(go.Scatter(
     x=x_coords, y=y_coords, mode='lines', 
-    name=f"현재 궤적 (각도: {angle}°, 속도: {v0}m/s)", line=dict(color='blue', width=4)
+    name=f"현재 궤적 (물의 양: {water_vol}mL)", line=dict(color='blue', width=4)
 ))
 
+# 3. 레이아웃 고정 (실험 최고 사거리가 40m, 최고 높이가 10m 내외이므로 박스를 이에 맞춤)
 fig.update_layout(
-    title="물로켓 비행 궤적 비교 (공간 속 포물선)",
+    title=f"물로켓 비행 궤적 비교 (발사각: {ANGLE}° 고정)",
     xaxis_title="수평 거리 (m)", yaxis_title="높이 (m)",
-    yaxis=dict(range=[0, 50]), xaxis=dict(range=[0, 100]),
+    yaxis=dict(range=[0, 15]), xaxis=dict(range=[0, 45]),  # 고정 축을 통해 궤적의 팽창/수축이 한눈에 보임
     template="plotly_white", legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99)
 )
 
+# 화면 분할 출력
 col1, col2 = st.columns([2, 1])
 with col1:
     st.plotly_chart(fig, use_container_width=True)
@@ -76,27 +89,19 @@ with col2:
 
 st.divider()
 
-# --- 기능 2: [수정] 물의 양에 따른 가상 실험 데이터셋 생성 ---
+# --- 기능 2: 데이터 분석 수업을 위한 가상 데이터셋 생성 ---
 st.subheader("📈 통계 분석용 가상 실험 데이터셋 생성 (변인: 물의 양)")
-st.write("발사각(45°)과 공기압을 고정하고, **물의 양(100mL ~ 700mL)**을 변화시키며 반복 실험했을 때의 실제 측정 데이터를 생성합니다.")
-st.caption("※ 물리적으로 물의 양이 너무 적으면 추진력이 부족하고, 너무 많으면 로켓이 무거워져 사거리는 '특정 부피'에서 극대화되는 이차함수 관계를 가집니다.")
+st.write("발사각(45°)과 공기압을 고정하고, **\n물의 양(100mL ~ 700mL)**을 변화시키며 반복 실험했을 때의 실제 측정 데이터를 생성합니다.")
 
 if st.button("🎲 물의 양 기준 새로운 실험 데이터 생성하기"):
-    # 100mL부터 700mL까지 100mL 간격으로 각 5회씩 반복 (총 35회 실험)
     water_volumes = np.repeat(np.arange(100, 701, 100), 5)
     
     results = []
     for idx, water in enumerate(water_volumes):
-        # 이론적 배경 모델 설정: 최적의 물의 양은 400mL일 때 사거리 40m 정점 유도
-        # 수식: Range = 40 - 0.0002 * (water - 400)^2
         theoretical_r = 40 - 0.0002 * ((water - 400) ** 2)
-        
-        # 현실적인 환경 오차 노이즈 반영
         noise = np.random.normal(0, 1.5)
         actual_r = max(0, theoretical_r + noise)
-        
-        # 45도 발사이므로 최고 높이는 대략 사거리의 1/4 수준 형성
-        actual_h = max(0, (actual_r / 4) + np.random.normal(0, 0.4))
+        actual_h = max(0, (actual_r / 4) + np.random.normal(0, 0.4)) # 45도 최고높이는 대략 사거리의 1/4
         
         results.append({
             "실험 번호": idx + 1,
@@ -177,11 +182,11 @@ if 'rocket_data' in st.session_state:
         fig_c.update_layout(title="궤적 탐구 검증 선형 뷰", template="plotly_white")
         st.plotly_chart(fig_c, use_container_width=True)
 
-    # --- 기능 4: [신규 추가] 물의 양 vs 사거리 관계 분석 및 데이터 분석 공간 ---
+    # --- 기능 4: 물의 양 vs 사거리 관계 분석 및 데이터 분석 공간 ---
     st.divider()
     st.subheader("📊 [활동 2] 데이터 분석: 물의 양에 따른 사거리 방정식 도출 및 미래 예측")
     st.markdown("""
-    이번에는 공간 속 비행선이 아니라, **전체 실험 데이터 분산 차트**를 보고 학습합니다.
+    이번에는 공간 속 비행선이 아니라, 전체 실험 데이터 분산 차트를 보고 학습합니다.
     * **X축**: 물의 양 (mL) / **Y축**: 실제 측정 사거리 (m)
     * **목표**: 데이터 분포의 정점(최적값)을 찾아 **꼭짓점 형식의 이차함수 식 $R = a(W - h)^2 + k$**를 도출하고, 미지의 물의 양에 대한 거리를 예측하세요.
     """)
@@ -190,8 +195,6 @@ if 'rocket_data' in st.session_state:
 
     with col_an_left:
         st.markdown("##### ✏️ 1단계: 전체 데이터 경향성을 대표하는 모델 설계")
-        st.caption("산점도의 정점(꼭짓점) 위치를 유추하여 표준/꼭짓점 형태의 파라미터를 입력하세요.")
-        
         col_w1, col_w2, col_w3 = st.columns(3)
         with col_w1:
             fit_h = st.number_input("최적의 물의 양 예측 (꼭짓점 h, mL):", value=350.0, step=10.0)
@@ -201,50 +204,36 @@ if 'rocket_data' in st.session_state:
             fit_a = st.number_input("그래프의 폭과 방향 결정 (계수 a):", value=-0.00010, step=0.00001, format="%.5f")
 
         st.markdown("##### 🔮 2단계: 유도한 방정식을 바탕으로 미래 데이터 예측하기")
-        st.caption("만약 우리가 실험하지 않은 양의 물을 넣는다면 얼마만큼 날아갈까요? 내가 만든 식으로 시뮬레이션해 봅니다.")
         predict_w = st.slider("예측해보고 싶은 미지의 물의 양 선택 (mL):", min_value=50, max_value=900, value=450, step=10)
-        
-        # 학생 공식 기반 예측 계산
         student_pred_r = fit_a * ((predict_w - fit_h) ** 2) + fit_k
-        # 실제 내부 시뮬레이션 참값 이론값 계산 비교용
-        true_pred_r = max(0, 40 - 0.0002 * ((predict_w - 400) ** 2))
 
     with col_an_right:
         st.markdown("##### 🎯 내 수학 모델 기반 예측 리포트")
         st.metric(label=f"💡 물 {predict_w}mL 입력 시 내가 예측한 수평 이동 거리", value=f"{student_pred_r:.2f} m")
         
-        # 모델 적합도 체크 피드백
         error_at_optimal = abs(fit_h - 400)
         if error_at_optimal < 30 and abs(fit_k - 40) < 2:
             st.success("🎯 대단합니다! 전체 실험 데이터를 완벽하게 대변하는 최적화 방정식을 찾아내셨습니다.")
         elif error_at_optimal < 70:
-            st.info("💡 데이터 경향성은 파악했으나 정점의 위치를 조금 더 세밀하게 튜닝할 수 있습니다. 그래프를 다시 보며 수정해 보세요.")
+            st.info("💡 데이터 경향성은 파악했으나 정점의 위치를 조금 더 세밀하게 튜닝할 수 있습니다.")
         else:
-            st.warning("⚠️ 입력한 파라미터가 데이터의 실제 흐름과 차이가 큽니다. 슬라이더나 수치를 변경해 보세요.")
+            st.warning("⚠️ 입력한 파라미터가 데이터의 실제 흐름과 차이가 큽니다.")
 
-    # 분석 시각화 플로팅
     w_axis = np.linspace(50, 850, 200)
     student_curve_r = fit_a * ((w_axis - fit_h) ** 2) + fit_k
     
     fig_analysis = go.Figure()
-    # 1. 실제 실험 데이터 전체 산점도 표시
     fig_analysis.add_trace(go.Scatter(
         x=df_display["물의 양 (mL)"], y=df_display["실제 측정 사거리 (m)"],
         mode='markers', name='실제 수집된 실험 데이터들',
-        marker=dict(color='rgba(30, 58, 138, 0.6)', size=9, symbol='circle')
+        marker=dict(color='rgba(30, 58, 138, 0.6)', size=9)
     ))
-    # 2. 학생이 유도한 예측 곡선 표시
     fig_analysis.add_trace(go.Scatter(
-        x=w_axis, y=student_curve_r,
-        mode='lines', name='내가 유도한 추세 예측 방정식',
-        line=dict(color='crimson', width=3)
+        x=w_axis, y=student_curve_r, mode='lines', name='내가 유도한 추세 예측 방정식', line=dict(color='crimson', width=3)
     ))
-    # 3. 예측하겠다고 지정한 가상의 포인트 표시
     fig_analysis.add_trace(go.Scatter(
-        x=[predict_w], y=[student_pred_r],
-        mode='markers+text', name='🎯 내 공식 기반 예측 지점',
-        text=[f"{student_pred_r:.1f}m 예측"], textposition="top center",
-        marker=dict(color='gold', size=14, symbol='star')
+        x=[predict_w], y=[student_pred_r], mode='markers+text', name='🎯 내 공식 기반 예측 지점',
+        text=[f"{student_pred_r:.1f}m 예측"], textposition="top center", marker=dict(color='gold', size=14, symbol='star')
     ))
 
     fig_analysis.update_layout(
