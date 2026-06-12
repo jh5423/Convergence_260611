@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-# 1. 웹 페이지 제목 및 기본 설정 (layout은 wide 유지)
+# 1. 웹 페이지 제목 및 기본 설정
 st.set_page_config(page_title="물로켓 융합 시뮬레이터", page_icon="🚀", layout="wide")
 
 # =====================================================================
@@ -24,19 +24,19 @@ st.markdown("""
         padding-bottom: 2rem !important;
     }
     
-    /* 앱 메인 배경색 (살짝 시원한 톤의 밝은 회색) */
+    /* 앱 메인 배경색 */
     [data-testid="stAppViewContainer"] {
         background-color: #f1f5f9;
     }
     
-    /* 사이드바 디자인 (흰색 배경에 부드러운 그림자) */
+    /* 사이드바 디자인 */
     [data-testid="stSidebar"] {
         background-color: #ffffff;
         box-shadow: 2px 0 12px rgba(0,0,0,0.05);
         padding-top: 2rem;
     }
     
-    /* 주요 제목 스타일 (강조된 밑줄) */
+    /* 주요 제목 스타일 */
     h1 {
         color: #1e3a8a !important;
         font-weight: 800 !important;
@@ -49,7 +49,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
     
-    /* 메트릭(수치 결과) 박스 디자인 - 카드형 UI */
+    /* 메트릭 박스 디자인 - 카드형 UI */
     [data-testid="stMetric"] {
         background-color: #ffffff;
         border-radius: 12px;
@@ -68,7 +68,7 @@ st.markdown("""
         color: #64748b !important;
     }
     
-    /* 버튼 입체적 디자인 (그라데이션 및 애니메이션) */
+    /* 버튼 입체적 디자인 */
     div.stButton > button {
         background: linear-gradient(135deg, #0ea5e9, #2563eb);
         color: white;
@@ -87,14 +87,14 @@ st.markdown("""
         color: white;
     }
     
-    /* 알림창 디자인 부드럽게 */
+    /* 알림창 디자인 */
     div[data-testid="stAlert"] {
         border-radius: 10px;
         border: none;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
     
-    /* 슬라이더 및 입력창 주변을 흰색 카드로 묶기 */
+    /* 입력창 주변 흰색 카드화 */
     .stSlider, .stNumberInput, .stTextInput, .stSelectbox {
         background-color: white;
         padding: 15px 20px;
@@ -103,7 +103,7 @@ st.markdown("""
         margin-bottom: 8px;
     }
     
-    /* 데이터프레임 테두리 둥글게 */
+    /* 데이터프레임 테두리 */
     [data-testid="stDataFrame"] {
         border-radius: 10px;
         overflow: hidden;
@@ -116,7 +116,7 @@ st.markdown("""
 st.title("🚀 물로켓 비행 궤적 & 데이터 분석 시뮬레이터")
 st.markdown("""
 이 프로그램은 물로켓의 발사 조건에 따른 **이차함수 비행 궤적**을 시뮬레이션하고, 
-**'물의 양(mL)'과 '수평 이동 거리(m)' 사이의 통계적 인과관계**를 분석하여 미래 데이터를 예측하는 수학·데이터 분석 융합 교육 도구입니다.
+**'물의 양(L)'과 '수평 이동 거리(m)' 사이의 통계적 인과관계**를 분석하여 미래 데이터를 예측하는 수학·데이터 분석 융합 교육 도구입니다.
 """)
 
 # 중력 가속도 상수 및 각도 고정
@@ -124,16 +124,17 @@ G = 9.8
 ANGLE = 45  
 
 st.sidebar.header("🛠️ 궤적 시뮬레이션 컨트롤 패널")
-st.sidebar.caption("실제 실험처럼 물의 양을 조절하여 날려보세요.")
-water_vol = st.sidebar.slider("물로켓 속 물의 양 (mL)", min_value=100, max_value=700, value=400, step=10)
+st.sidebar.caption("실제 실험처럼 물의 양(L)을 조절하여 날려보세요.")
+# 🧪 단위를 L로 변경하고, 스텝을 0.05L로 변형
+water_vol = st.sidebar.slider("물로켓 속 물의 양 (L)", min_value=0.10, max_value=0.70, value=0.40, step=0.05, format="%.2f")
 
 if 'prev_traj' not in st.session_state:
     st.session_state['prev_traj'] = None  
 if 'curr_params' not in st.session_state:
     st.session_state['curr_params'] = {'water_vol': water_vol, 'x': [], 'y': []}
 
-# --- 기능 1: 궤적 계산 ---
-theoretical_r = 40 - 0.0002 * ((water_vol - 400) ** 2)
+# --- 기능 1: 궤적 계산 (L 단위 수식 최적화) ---
+theoretical_r = 40 - 200 * ((water_vol - 0.4) ** 2)
 v0 = np.sqrt(theoretical_r * G)
 
 rad = np.radians(ANGLE)
@@ -157,13 +158,13 @@ if st.session_state['prev_traj'] is not None and len(st.session_state['prev_traj
     prev = st.session_state['prev_traj']
     fig.add_trace(go.Scatter(
         x=prev['x'], y=prev['y'], mode='lines', 
-        name=f"이전 궤적 ({prev['water_vol']}mL)", 
+        name=f"이전 궤적 ({prev['water_vol']:.2f}L)", 
         line=dict(color='#94a3b8', width=2, dash='dash'), opacity=0.6
     ))
 
 fig.add_trace(go.Scatter(
     x=x_coords, y=y_coords, mode='lines', 
-    name=f"현재 궤적 ({water_vol}mL)", line=dict(color='#2563eb', width=4)
+    name=f"현재 궤적 ({water_vol:.2f}L)", line=dict(color='#2563eb', width=4)
 ))
 
 fig.update_layout(
@@ -191,20 +192,21 @@ st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
 
 # --- 기능 2: 가상 데이터셋 생성 ---
 st.subheader("📈 통계 분석용 실험 데이터셋 생성")
-st.write("발사각을 고정하고, **물의 양(100mL ~ 700mL)**을 변화시키며 반복 실험한 실제 측정 데이터를 수집합니다.")
+st.write("발사각을 고정하고, **물의 양(0.10L ~ 0.70L)**을 변화시키며 반복 실험한 실제 측정 데이터를 수집합니다.")
 
 if st.button("🎲 물의 양 기준 새로운 실험 데이터 생성하기"):
-    water_volumes = np.repeat(np.arange(100, 701, 100), 5)
+    # 🧪 데이터 생성 단위를 0.05L 스텝으로 변경
+    water_volumes = np.repeat(np.arange(0.10, 0.71, 0.05), 5)
     results = []
     for idx, water in enumerate(water_volumes):
-        theoretical_r = 40 - 0.0002 * ((water - 400) ** 2)
+        theoretical_r = 40 - 200 * ((water - 0.4) ** 2)
         noise = np.random.normal(0, 1.5)
         actual_r = max(0, theoretical_r + noise)
         actual_h = max(0, (actual_r / 4) + np.random.normal(0, 0.4)) 
         
         results.append({
             "실험 번호": idx + 1,
-            "물의 양 (mL)": water,
+            "물의 양 (L)": round(water, 2),
             "실제 측정 사거리 (m)": round(actual_r, 2),
             "실제 최고 높이 (m)": round(actual_h, 2)
         })
@@ -234,8 +236,9 @@ if 'rocket_data' in st.session_state:
     
     r_val = student_row["실제 측정 사거리 (m)"]
     h_val = student_row["실제 최고 높이 (m)"]
+    w_val = student_row["물의 양 (L)"]
     
-    st.success(f"**실험 단서** ➡️ 원점(0,0), 낙하지점({r_val}, 0), 최고높이 {h_val}m")
+    st.success(f"**실험 단서** ➡️ 물의 양: {w_val:.2f}L | 원점(0,0), 낙하지점({r_val}, 0), 최고높이 {h_val}m")
 
     col_act, col_cal = st.columns([1.8, 1.2])
     with col_act:
@@ -288,39 +291,41 @@ if 'rocket_data' in st.session_state:
     with col_an1:
         st.markdown("##### ✏️ 1단계: 전체 데이터를 대표하는 회귀 모델 설계")
         w1, w2, w3 = st.columns(3)
-        with w1: fit_h = st.number_input("최적 물의 양 (꼭짓점 h):", value=350.0, step=10.0)
-        with w2: fit_k = st.number_input("최대 사거리 (꼭짓점 k):", value=35.0, step=0.5)
-        with w3: fit_a = st.number_input("방향/폭 계수 (a):", value=-0.00010, step=0.00001, format="%.5f")
+        # 🧪 분석 수치 입력 단위들을 리터(L) 스케일에 맞춤
+        with w1: fit_h = st.number_input("최적 물의 양 (꼭짓점 h, L):", value=0.35, step=0.01, format="%.2f")
+        with w2: fit_k = st.number_input("최대 사거리 (꼭짓점 k, m):", value=35.0, step=0.5)
+        with w3: fit_a = st.number_input("방향/폭 계수 (a):", value=-100.0, step=1.0, format="%.1f")
 
         st.markdown("##### 🔮 2단계: 미지의 데이터 예측하기")
-        predict_w = st.slider("예측해볼 미지의 물의 양 (mL):", min_value=50, max_value=900, value=450, step=10)
+        # 🧪 미래 예측 슬라이더 스텝도 0.05L로 변경
+        predict_w = st.slider("예측해볼 미지의 물의 양 (L):", min_value=0.05, max_value=0.90, value=0.45, step=0.05, format="%.2f")
         student_pred_r = fit_a * ((predict_w - fit_h) ** 2) + fit_k
 
     with col_an2:
-        st.markdown("##### 🎯 내 수학 모델 기반 예측 리포트")
+        st.markdown("##### 🎯 내 공식 예측 결과")
         
-        # 💡 [신규 추가] 학생들이 조절한 수치 기반 실시간 모델 수식 노출 구역
+        # 실시간 연동 라텍스 수식 노출 구역
         st.markdown("<div style='background-color:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px; text-align:center;'>", unsafe_allow_html=True)
         st.markdown("**내가 완성한 이차함수 모델식**")
-        st.latex(f"R = {fit_a:.5f}(W - {fit_h:g})^2 + {fit_k:g}")
+        st.latex(f"R = {fit_a:.1f}(W - {fit_h:.2f})^2 + {fit_k:g}")
         st.markdown("</div>", unsafe_allow_html=True)
         
-        st.metric(label=f"💡 {predict_w}mL 입력 시 예측 거리", value=f"{student_pred_r:.2f} m")
+        st.metric(label=f"💡 {predict_w:.2f}L 입력 시 예측 거리", value=f"{student_pred_r:.2f} m")
         
-        err = abs(fit_h - 400)
-        if err < 30 and abs(fit_k - 40) < 2:
+        err = abs(fit_h - 0.4)
+        if err < 0.03 and abs(fit_k - 40) < 2:
             st.success("🎯 완벽합니다! 전체 실험 데이터를 대변하는 최적화 방정식을 찾았습니다.")
-        elif err < 70:
+        elif err < 0.07:
             st.info("💡 경향성은 파악했으나 정점의 위치를 조금 더 튜닝해보세요.")
         else:
             st.warning("⚠️ 입력한 파라미터가 실제 흐름과 차이가 큽니다.")
 
-    w_axis = np.linspace(50, 850, 200)
+    w_axis = np.linspace(0.05, 0.85, 200)
     student_curve_r = fit_a * ((w_axis - fit_h) ** 2) + fit_k
     
     fig_a = go.Figure()
     fig_a.add_trace(go.Scatter(
-        x=df_display["물의 양 (mL)"], y=df_display["실제 측정 사거리 (m)"],
+        x=df_display["물의 양 (L)"], y=df_display["실제 측정 사거리 (m)"],
         mode='markers', name='실험 데이터 산점도',
         marker=dict(color='rgba(37, 99, 235, 0.5)', size=10)
     ))
@@ -334,8 +339,8 @@ if 'rocket_data' in st.session_state:
 
     fig_a.update_layout(
         title="<b>물의 양(통제 변인) vs 수평 사거리 관계 차트</b>",
-        xaxis_title="<b>넣은 물의 양 (mL)</b>", yaxis_title="<b>수평 사거리 (m)</b>",
-        xaxis=dict(range=[0, 950], gridcolor='#e2e8f0'), yaxis=dict(range=[0, 55], gridcolor='#e2e8f0'),
+        xaxis_title="<b>넣은 물의 양 (L)</b>", yaxis_title="<b>수평 사거리 (m)</b>",
+        xaxis=dict(range=[0, 0.95], gridcolor='#e2e8f0'), yaxis=dict(range=[0, 55], gridcolor='#e2e8f0'),
         template="plotly_white", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='#f8fafc',
         legend=dict(yanchor="bottom", y=0.01, xanchor="right", x=0.99, bgcolor="rgba(255,255,255,0.8)")
     )
